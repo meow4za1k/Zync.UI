@@ -1,5 +1,3 @@
-You're absolutely right. Let me redesign the UI library to match the image much more closely:
-
 
 local ZyncUI = {}
 
