@@ -1,59 +1,48 @@
-local PlexUI = {}
+You're absolutely right. Let me redesign the UI library to match the image much more closely:
 
--- Configuration
-PlexUI.Config = {
-    Title = "PlexUI",
+
+local ZyncUI = {}
+
+-- Core Configuration
+ZyncUI.Config = {
+    Title = "Zync.pmo | Premium",
     Theme = {
-        Background = Color3.fromRGB(20, 20, 20),
-        Header = Color3.fromRGB(30, 30, 30),
+        Background = Color3.fromRGB(25, 25, 25),
+        MainBackground = Color3.fromRGB(15, 15, 15),
+        SectionBackground = Color3.fromRGB(20, 20, 20),
         Text = Color3.fromRGB(255, 255, 255),
-        Accent = Color3.fromRGB(80, 80, 255),
-        Secondary = Color3.fromRGB(40, 40, 40),
-        Hover = Color3.fromRGB(50, 50, 50),
+        SectionTitle = Color3.fromRGB(80, 80, 255),
+        TabText = Color3.fromRGB(255, 255, 255),
+        TabSelected = Color3.fromRGB(255, 255, 255),
+        TabBackground = Color3.fromRGB(25, 25, 25),
+        BorderColor = Color3.fromRGB(40, 40, 40),
     },
     ToggleKey = Enum.KeyCode.RightShift,
-    Draggable = true,
 }
 
--- Core UI Components
-function PlexUI:CreateWindow(config)
-    config = config or {}
-    for k, v in pairs(config) do
-        self.Config[k] = v
-    end
+function ZyncUI:Create()
+    local UI = {}
     
-    -- Create main UI
-    local PlexLibrary = {}
+    -- Create base GUI
     local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "PlexUI"
+    screenGui.Name = "ZyncUI"
     screenGui.ResetOnSpawn = false
     screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     
+    -- Main Frame
     local main = Instance.new("Frame")
     main.Name = "Main"
     main.BackgroundColor3 = self.Config.Theme.Background
-    main.BorderSizePixel = 0
+    main.BorderColor3 = self.Config.Theme.BorderColor
+    main.BorderSizePixel = 1
     main.Position = UDim2.new(0.5, -300, 0.5, -200)
     main.Size = UDim2.new(0, 600, 0, 400)
     main.Parent = screenGui
     
-    -- Drop shadow
-    local shadow = Instance.new("ImageLabel")
-    shadow.Name = "Shadow"
-    shadow.BackgroundTransparency = 1
-    shadow.Position = UDim2.new(0, -15, 0, -15)
-    shadow.Size = UDim2.new(1, 30, 1, 30)
-    shadow.ZIndex = -1
-    shadow.Image = "rbxassetid://5554236805"
-    shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
-    shadow.ScaleType = Enum.ScaleType.Slice
-    shadow.SliceCenter = Rect.new(23, 23, 277, 277)
-    shadow.Parent = main
-    
     -- Header
     local header = Instance.new("Frame")
     header.Name = "Header"
-    header.BackgroundColor3 = self.Config.Theme.Header
+    header.BackgroundColor3 = self.Config.Theme.Background
     header.BorderSizePixel = 0
     header.Size = UDim2.new(1, 0, 0, 30)
     header.Parent = main
@@ -70,222 +59,228 @@ function PlexUI:CreateWindow(config)
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = header
     
-    local close = Instance.new("TextButton")
-    close.Name = "Close"
-    close.BackgroundTransparency = 1
-    close.Position = UDim2.new(1, -30, 0, 0)
-    close.Size = UDim2.new(0, 30, 1, 0)
-    close.Font = Enum.Font.GothamBold
-    close.Text = "×"
-    close.TextColor3 = self.Config.Theme.Text
-    close.TextSize = 20
-    close.Parent = header
-    
-    -- Tab System
+    -- Tab container
     local tabContainer = Instance.new("Frame")
     tabContainer.Name = "TabContainer"
-    tabContainer.BackgroundColor3 = self.Config.Theme.Header
+    tabContainer.BackgroundColor3 = self.Config.Theme.Background
     tabContainer.BorderSizePixel = 0
     tabContainer.Position = UDim2.new(0, 0, 0, 30)
     tabContainer.Size = UDim2.new(1, 0, 0, 30)
     tabContainer.Parent = main
     
-    local tabContent = Instance.new("Frame")
-    tabContent.Name = "TabContent"
-    tabContent.BackgroundColor3 = self.Config.Theme.Background
-    tabContent.BorderSizePixel = 0
-    tabContent.Position = UDim2.new(0, 0, 0, 60)
-    tabContent.Size = UDim2.new(1, 0, 1, -60)
-    tabContent.Parent = main
+    -- Tab Content Container
+    local contentContainer = Instance.new("Frame")
+    contentContainer.Name = "ContentContainer"
+    contentContainer.BackgroundColor3 = self.Config.Theme.MainBackground
+    contentContainer.BorderSizePixel = 0
+    contentContainer.Position = UDim2.new(0, 0, 0, 60)
+    contentContainer.Size = UDim2.new(1, 0, 1, -60)
+    contentContainer.Parent = main
     
     -- Dragging functionality
-    if self.Config.Draggable then
-        local dragging, dragInput, dragStart, startPos
-        
-        local function update(input)
-            local delta = input.Position - dragStart
-            main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-        
-        header.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                dragging = true
-                dragStart = input.Position
-                startPos = main.Position
-                
-                input.Changed:Connect(function()
-                    if input.UserInputState == Enum.UserInputState.End then
-                        dragging = false
-                    end
-                end)
-            end
-        end)
-        
-        header.InputChanged:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseMovement then
-                dragInput = input
-            end
-        end)
-        
-        game:GetService("UserInputService").InputChanged:Connect(function(input)
-            if input == dragInput and dragging then
-                update(input)
-            end
-        end)
+    local dragging = false
+    local dragInput, dragStart, startPos
+    
+    local function updateDrag(input)
+        local delta = input.Position - dragStart
+        main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
     
-    -- Toggle UI visibility with keybind
+    header.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = main.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    
+    header.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = input
+        end
+    end)
+    
+    game:GetService("UserInputService").InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            updateDrag(input)
+        end
+    end)
+    
+    -- Toggle visibility with keybind
     game:GetService("UserInputService").InputBegan:Connect(function(input, processed)
         if not processed and input.KeyCode == self.Config.ToggleKey then
             screenGui.Enabled = not screenGui.Enabled
         end
     end)
     
-    -- Close button functionality
-    close.MouseButton1Click:Connect(function()
-        screenGui.Enabled = false
-    end)
-    
-    -- Tab functionality
+    -- Tab system
     local tabs = {}
     local tabButtons = {}
     local currentTab = nil
     
-    function PlexLibrary:AddTab(name)
+    function UI:AddTab(name)
         local tabButton = Instance.new("TextButton")
-        tabButton.Name = name.."Tab"
-        tabButton.BackgroundTransparency = 1
+        tabButton.Name = name .. "Tab"
+        tabButton.BackgroundColor3 = self.Config.Theme.TabBackground
+        tabButton.BorderSizePixel = 0
         tabButton.Size = UDim2.new(0, 100, 1, 0)
         tabButton.Font = Enum.Font.Gotham
         tabButton.Text = name
-        tabButton.TextColor3 = self.Config.Theme.Text
+        tabButton.TextColor3 = self.Config.Theme.TabText
         tabButton.TextSize = 14
         tabButton.Parent = tabContainer
         
-        -- Position the tab button
+        -- Position the tab based on existing tabs
         if #tabButtons > 0 then
-            tabButton.Position = UDim2.new(0, 100 * #tabButtons, 0, 0)
-        else
-            tabButton.Position = UDim2.new(0, 0, 0, 0)
+            tabButton.Position = UDim2.new(0, #tabButtons * 100, 0, 0)
         end
         
-        local tabFrame = Instance.new("ScrollingFrame")
-        tabFrame.Name = name.."Content"
-        tabFrame.BackgroundTransparency = 1
-        tabFrame.BorderSizePixel = 0
-        tabFrame.Size = UDim2.new(1, 0, 1, 0)
-        tabFrame.ScrollBarThickness = 4
-        tabFrame.ScrollBarImageColor3 = self.Config.Theme.Accent
-        tabFrame.Visible = false
-        tabFrame.Parent = tabContent
+        -- Create tab content
+        local tabContent = Instance.new("ScrollingFrame")
+        tabContent.Name = name .. "Content"
+        tabContent.BackgroundTransparency = 1
+        tabContent.BorderSizePixel = 0
+        tabContent.Size = UDim2.new(1, 0, 1, 0)
+        tabContent.CanvasSize = UDim2.new(0, 0, 0, 0)
+        tabContent.ScrollBarThickness = 2
+        tabContent.ScrollingDirection = Enum.ScrollingDirection.Y
+        tabContent.Visible = false
+        tabContent.Parent = contentContainer
         
-        -- Add padding and layout
-        local padding = Instance.new("UIPadding")
-        padding.PaddingLeft = UDim.new(0, 10)
-        padding.PaddingRight = UDim.new(0, 10)
-        padding.PaddingTop = UDim.new(0, 10)
-        padding.PaddingBottom = UDim.new(0, 10)
-        padding.Parent = tabFrame
-        
-        local list = Instance.new("UIListLayout")
-        list.SortOrder = Enum.SortOrder.LayoutOrder
-        list.Padding = UDim.new(0, 10)
-        list.Parent = tabFrame
-        
-        -- Auto-size the content
-        list:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-            tabFrame.CanvasSize = UDim2.new(0, 0, 0, list.AbsoluteContentSize.Y + 20)
-        end)
-        
-        table.insert(tabButtons, tabButton)
-        
-        -- Tab button click handler
+        -- Tab click handling
         tabButton.MouseButton1Click:Connect(function()
             if currentTab then
                 currentTab.Visible = false
             end
-            tabFrame.Visible = true
-            currentTab = tabFrame
             
-            -- Update tab button styling
-            for _, btn in ipairs(tabButtons) do
-                if btn == tabButton then
-                    btn.Font = Enum.Font.GothamBold
-                    btn.TextColor3 = self.Config.Theme.Accent
-                else
-                    btn.Font = Enum.Font.Gotham
-                    btn.TextColor3 = self.Config.Theme.Text
-                end
+            for _, btn in pairs(tabButtons) do
+                btn.Font = Enum.Font.Gotham
+                btn.TextColor3 = self.Config.Theme.TabText
             end
+            
+            tabButton.Font = Enum.Font.GothamBold
+            tabButton.TextColor3 = self.Config.Theme.TabSelected
+            
+            tabContent.Visible = true
+            currentTab = tabContent
         end)
         
-        -- Default to the first tab
+        table.insert(tabButtons, tabButton)
+        
+        -- Select first tab by default
         if #tabButtons == 1 then
             tabButton.Font = Enum.Font.GothamBold
-            tabButton.TextColor3 = self.Config.Theme.Accent
-            tabFrame.Visible = true
-            currentTab = tabFrame
+            tabButton.TextColor3 = self.Config.Theme.TabSelected
+            tabContent.Visible = true
+            currentTab = tabContent
         end
         
-        -- Element creation functions
-        local tabElements = {}
+        -- Grid layout for sections 
+        local gridLayout = Instance.new("UIGridLayout")
+        gridLayout.CellPadding = UDim2.new(0, 10, 0, 10)
+        gridLayout.CellSize = UDim2.new(0.5, -15, 0, 0) -- Sections take up half width
+        gridLayout.Parent = tabContent
         
-        function tabElements:CreateSection(sectionName)
+        local padding = Instance.new("UIPadding")
+        padding.PaddingLeft = UDim2.new(0, 10)
+        padding.PaddingRight = UDim2.new(0, 10)
+        padding.PaddingTop = UDim2.new(0, 10)
+        padding.PaddingBottom = UDim2.new(0, 10)
+        padding.Parent = tabContent
+        
+        -- Tab methods
+        local TabMethods = {}
+        
+        function TabMethods:CreateSection(name)
             local section = Instance.new("Frame")
-            section.Name = sectionName.."Section"
-            section.BackgroundColor3 = self.Config.Theme.Secondary
-            section.BorderSizePixel = 0
-            section.Size = UDim2.new(0.48, 0, 0, 120)
-            section.Parent = tabFrame
+            section.Name = name .. "Section"
+            section.BackgroundColor3 = self.Config.Theme.SectionBackground
+            section.BorderColor3 = self.Config.Theme.BorderColor
+            section.BorderSizePixel = 1
+            section.AutomaticSize = Enum.AutomaticSize.Y
+            section.Size = UDim2.new(1, 0, 0, 0)
+            section.Parent = tabContent
             
-            local sectionHeader = Instance.new("TextLabel")
-            sectionHeader.Name = "Header"
-            sectionHeader.BackgroundColor3 = self.Config.Theme.Accent
-            sectionHeader.BorderSizePixel = 0
-            sectionHeader.Size = UDim2.new(1, 0, 0, 25)
-            sectionHeader.Font = Enum.Font.GothamBold
-            sectionHeader.Text = sectionName
-            sectionHeader.TextColor3 = self.Config.Theme.Text
-            sectionHeader.TextSize = 14
-            sectionHeader.Parent = section
+            -- Section header
+            local header = Instance.new("TextLabel")
+            header.Name = "Header"
+            header.BackgroundColor3 = self.Config.Theme.SectionTitle
+            header.BorderSizePixel = 0
+            header.Size = UDim2.new(1, 0, 0, 24)
+            header.Font = Enum.Font.GothamBold
+            header.Text = name
+            header.TextColor3 = self.Config.Theme.Text
+            header.TextSize = 14
+            header.Parent = section
             
-            local sectionContent = Instance.new("Frame")
-            sectionContent.Name = "Content"
-            sectionContent.BackgroundTransparency = 1
-            sectionContent.Position = UDim2.new(0, 0, 0, 25)
-            sectionContent.Size = UDim2.new(1, 0, 1, -25)
-            sectionContent.Parent = section
+            -- Section content frame
+            local content = Instance.new("Frame")
+            content.Name = "Content"
+            content.BackgroundTransparency = 1
+            content.Position = UDim2.new(0, 0, 0, 24)
+            content.Size = UDim2.new(1, 0, 0, 0)
+            content.AutomaticSize = Enum.AutomaticSize.Y
+            content.Parent = section
             
+            -- Content layout
+            local listLayout = Instance.new("UIListLayout")
+            listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+            listLayout.Padding = UDim.new(0, 5)
+            listLayout.Parent = content
+            
+            -- Content padding
             local padding = Instance.new("UIPadding")
             padding.PaddingLeft = UDim.new(0, 8)
             padding.PaddingRight = UDim.new(0, 8)
             padding.PaddingTop = UDim.new(0, 8)
             padding.PaddingBottom = UDim.new(0, 8)
-            padding.Parent = sectionContent
+            padding.Parent = content
             
-            local list = Instance.new("UIListLayout")
-            list.SortOrder = Enum.SortOrder.LayoutOrder
-            list.Padding = UDim.new(0, 6)
-            list.Parent = sectionContent
-            
-            -- Auto-size the section based on content
-            list:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-                section.Size = UDim2.new(0.48, 0, 0, list.AbsoluteContentSize.Y + 41)
+            -- Update section size when content changes
+            listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+                content.Size = UDim2.new(1, 0, 0, listLayout.AbsoluteContentSize.Y + 16)
+                section.Size = UDim2.new(1, 0, 0, content.Size.Y.Offset + 24)
+                
+                -- Update canvas size
+                local totalHeight = 0
+                for _, child in pairs(tabContent:GetChildren()) do
+                    if child:IsA("Frame") and child.Name:find("Section$") then
+                        totalHeight = totalHeight + child.AbsoluteSize.Y + gridLayout.CellPadding.Y.Offset
+                    end
+                end
+                tabContent.CanvasSize = UDim2.new(0, 0, 0, totalHeight)
             end)
             
-            local sectionElements = {}
+            -- Section methods
+            local SectionMethods = {}
             
-            function sectionElements:AddToggle(name, default, callback)
+            function SectionMethods:AddToggle(name, default, callback)
                 local toggle = Instance.new("Frame")
-                toggle.Name = name.."Toggle"
+                toggle.Name = name .. "Toggle"
                 toggle.BackgroundTransparency = 1
-                toggle.Size = UDim2.new(1, 0, 0, 25)
-                toggle.Parent = sectionContent
+                toggle.Size = UDim2.new(1, 0, 0, 20)
+                toggle.Parent = content
+                
+                local checkbox = Instance.new("Frame")
+                checkbox.Name = "Checkbox"
+                checkbox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+                checkbox.BorderColor3 = Color3.fromRGB(60, 60, 60)
+                checkbox.BorderSizePixel = 1
+                checkbox.Position = UDim2.new(0, 0, 0, 0)
+                checkbox.Size = UDim2.new(0, 16, 0, 16)
+                checkbox.Parent = toggle
                 
                 local label = Instance.new("TextLabel")
                 label.Name = "Label"
                 label.BackgroundTransparency = 1
-                label.Size = UDim2.new(1, -30, 1, 0)
+                label.Position = UDim2.new(0, 24, 0, 0)
+                label.Size = UDim2.new(1, -24, 1, 0)
                 label.Font = Enum.Font.Gotham
                 label.Text = name
                 label.TextColor3 = self.Config.Theme.Text
@@ -293,27 +288,18 @@ function PlexUI:CreateWindow(config)
                 label.TextXAlignment = Enum.TextXAlignment.Left
                 label.Parent = toggle
                 
-                local box = Instance.new("Frame")
-                box.Name = "Box"
-                box.BackgroundColor3 = self.Config.Theme.Background
-                box.BorderSizePixel = 0
-                box.Position = UDim2.new(1, -25, 0.5, -10)
-                box.Size = UDim2.new(0, 20, 0, 20)
-                box.Parent = toggle
-                
                 local value = default or false
                 
-                local function updateVisual()
+                local function updateToggle()
                     if value then
-                        box.BackgroundColor3 = self.Config.Theme.Accent
+                        checkbox.BackgroundColor3 = self.Config.Theme.SectionTitle
                     else
-                        box.BackgroundColor3 = self.Config.Theme.Background
+                        checkbox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
                     end
                 end
                 
-                updateVisual()
+                updateToggle()
                 
-                -- Clickable area
                 local button = Instance.new("TextButton")
                 button.Name = "Button"
                 button.BackgroundTransparency = 1
@@ -323,14 +309,14 @@ function PlexUI:CreateWindow(config)
                 
                 button.MouseButton1Click:Connect(function()
                     value = not value
-                    updateVisual()
+                    updateToggle()
                     if callback then callback(value) end
                 end)
                 
                 return {
                     SetValue = function(newValue)
                         value = newValue
-                        updateVisual()
+                        updateToggle()
                         if callback then callback(value) end
                     end,
                     GetValue = function()
@@ -339,12 +325,12 @@ function PlexUI:CreateWindow(config)
                 }
             end
             
-            function sectionElements:AddSlider(name, min, max, default, callback)
+            function SectionMethods:AddSlider(name, min, max, default, callback)
                 local slider = Instance.new("Frame")
-                slider.Name = name.."Slider"
+                slider.Name = name .. "Slider"
                 slider.BackgroundTransparency = 1
-                slider.Size = UDim2.new(1, 0, 0, 45)
-                slider.Parent = sectionContent
+                slider.Size = UDim2.new(1, 0, 0, 35)
+                slider.Parent = content
                 
                 local label = Instance.new("TextLabel")
                 label.Name = "Label"
@@ -357,47 +343,52 @@ function PlexUI:CreateWindow(config)
                 label.TextXAlignment = Enum.TextXAlignment.Left
                 label.Parent = slider
                 
-                local value = default or min
                 local valueDisplay = Instance.new("TextLabel")
                 valueDisplay.Name = "Value"
                 valueDisplay.BackgroundTransparency = 1
                 valueDisplay.Position = UDim2.new(1, -40, 0, 0)
                 valueDisplay.Size = UDim2.new(0, 40, 0, 20)
                 valueDisplay.Font = Enum.Font.Gotham
-                valueDisplay.Text = tostring(value)
+                valueDisplay.Text = tostring(default or min) .. "/" .. tostring(max)
                 valueDisplay.TextColor3 = self.Config.Theme.Text
                 valueDisplay.TextSize = 14
+                valueDisplay.TextXAlignment = Enum.TextXAlignment.Right
                 valueDisplay.Parent = slider
                 
-                local sliderBG = Instance.new("Frame")
-                sliderBG.Name = "Background"
-                sliderBG.BackgroundColor3 = self.Config.Theme.Background
-                sliderBG.BorderSizePixel = 0
-                sliderBG.Position = UDim2.new(0, 0, 0, 25)
-                sliderBG.Size = UDim2.new(1, 0, 0, 10)
-                sliderBG.Parent = slider
+                local sliderFrame = Instance.new("Frame")
+                sliderFrame.Name = "SliderFrame"
+                sliderFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+                sliderFrame.BorderColor3 = Color3.fromRGB(60, 60, 60)
+                sliderFrame.BorderSizePixel = 1
+                sliderFrame.Position = UDim2.new(0, 0, 0, 25)
+                sliderFrame.Size = UDim2.new(1, 0, 0, 8)
+                sliderFrame.Parent = slider
                 
                 local fill = Instance.new("Frame")
                 fill.Name = "Fill"
-                fill.BackgroundColor3 = self.Config.Theme.Accent
+                fill.BackgroundColor3 = self.Config.Theme.SectionTitle
                 fill.BorderSizePixel = 0
-                fill.Size = UDim2.new((value - min) / (max - min), 0, 1, 0)
-                fill.Parent = sliderBG
+                fill.Size = UDim2.new(0, 0, 1, 0)
+                fill.Parent = sliderFrame
+                
+                local value = default or min
                 
                 local function updateSlider(newValue)
                     value = math.clamp(newValue, min, max)
-                    valueDisplay.Text = tostring(value)
-                    fill.Size = UDim2.new((value - min) / (max - min), 0, 1, 0)
+                    local percentage = (value - min) / (max - min)
+                    fill.Size = UDim2.new(percentage, 0, 1, 0)
+                    valueDisplay.Text = tostring(value) .. "/" .. tostring(max)
                     if callback then callback(value) end
                 end
                 
-                -- Slider interaction
+                updateSlider(value)
+                
                 local button = Instance.new("TextButton")
                 button.Name = "Button"
                 button.BackgroundTransparency = 1
                 button.Size = UDim2.new(1, 0, 1, 0)
                 button.Text = ""
-                button.Parent = sliderBG
+                button.Parent = sliderFrame
                 
                 local dragging = false
                 
@@ -411,10 +402,14 @@ function PlexUI:CreateWindow(config)
                     end
                 end)
                 
-                button.MouseMoved:Connect(function(x)
-                    if dragging then
-                        local relPos = math.clamp((x - sliderBG.AbsolutePosition.X) / sliderBG.AbsoluteSize.X, 0, 1)
-                        local newValue = min + (max - min) * relPos
+                game:GetService("UserInputService").InputChanged:Connect(function(input)
+                    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+                        local mousePos = game:GetService("UserInputService"):GetMouseLocation()
+                        local framePos = sliderFrame.AbsolutePosition
+                        local frameSize = sliderFrame.AbsoluteSize
+                        
+                        local relativeX = math.clamp((mousePos.X - framePos.X) / frameSize.X, 0, 1)
+                        local newValue = min + (max - min) * relativeX
                         updateSlider(newValue)
                     end
                 end)
@@ -429,18 +424,17 @@ function PlexUI:CreateWindow(config)
                 }
             end
             
-            function sectionElements:AddDropdown(name, options, default, callback)
+            function SectionMethods:AddDropdown(name, options, default, callback)
                 local dropdown = Instance.new("Frame")
-                dropdown.Name = name.."Dropdown"
+                dropdown.Name = name .. "Dropdown"
                 dropdown.BackgroundTransparency = 1
-                dropdown.Size = UDim2.new(1, 0, 0, 45)
-                dropdown.ClipsDescendants = true
-                dropdown.Parent = sectionContent
+                dropdown.Size = UDim2.new(1, 0, 0, 20)
+                dropdown.Parent = content
                 
                 local label = Instance.new("TextLabel")
                 label.Name = "Label"
                 label.BackgroundTransparency = 1
-                label.Size = UDim2.new(1, 0, 0, 20)
+                label.Size = UDim2.new(1, 0, 1, 0)
                 label.Font = Enum.Font.Gotham
                 label.Text = name
                 label.TextColor3 = self.Config.Theme.Text
@@ -448,144 +442,156 @@ function PlexUI:CreateWindow(config)
                 label.TextXAlignment = Enum.TextXAlignment.Left
                 label.Parent = dropdown
                 
-                local selected = default or options[1] or "Select"
-                
-                local dropButton = Instance.new("TextButton")
-                dropButton.Name = "Button"
-                dropButton.BackgroundColor3 = self.Config.Theme.Background
-                dropButton.BorderSizePixel = 0
-                dropButton.Position = UDim2.new(0, 0, 0, 25)
-                dropButton.Size = UDim2.new(1, 0, 0, 25)
-                dropButton.Font = Enum.Font.Gotham
-                dropButton.Text = "  " .. selected
-                dropButton.TextColor3 = self.Config.Theme.Text
-                dropButton.TextSize = 14
-                dropButton.TextXAlignment = Enum.TextXAlignment.Left
-                dropButton.Parent = dropdown
+                local selected = Instance.new("TextLabel")
+                selected.Name = "Selected"
+                selected.BackgroundTransparency = 1
+                selected.Position = UDim2.new(1, -100, 0, 0)
+                selected.Size = UDim2.new(0, 80, 1, 0)
+                selected.Font = Enum.Font.Gotham
+                selected.Text = default or options[1]
+                selected.TextColor3 = self.Config.Theme.Text
+                selected.TextSize = 14
+                selected.TextXAlignment = Enum.TextXAlignment.Right
+                selected.Parent = dropdown
                 
                 local arrow = Instance.new("TextLabel")
                 arrow.Name = "Arrow"
                 arrow.BackgroundTransparency = 1
-                arrow.Position = UDim2.new(1, -20, 0, 0)
-                arrow.Size = UDim2.new(0, 20, 1, 0)
+                arrow.Position = UDim2.new(1, -15, 0, 0)
+                arrow.Size = UDim2.new(0, 15, 1, 0)
                 arrow.Font = Enum.Font.Gotham
                 arrow.Text = "▼"
                 arrow.TextColor3 = self.Config.Theme.Text
-                arrow.TextSize = 14
-                arrow.Parent = dropButton
+                arrow.TextSize = 12
+                arrow.Parent = dropdown
                 
-                local optionContainer = Instance.new("Frame")
-                optionContainer.Name = "Options"
-                optionContainer.BackgroundColor3 = self.Config.Theme.Background
-                optionContainer.BorderSizePixel = 0
-                optionContainer.Position = UDim2.new(0, 0, 0, 50)
-                optionContainer.Size = UDim2.new(1, 0, 0, 0)
-                optionContainer.Visible = false
-                optionContainer.Parent = dropdown
+                local button = Instance.new("TextButton")
+                button.Name = "Button"
+                button.BackgroundTransparency = 1
+                button.Size = UDim2.new(1, 0, 1, 0)
+                button.Text = ""
+                button.Parent = dropdown
                 
-                local list = Instance.new("UIListLayout")
-                list.SortOrder = Enum.SortOrder.LayoutOrder
-                list.Parent = optionContainer
+                local selectedValue = default or options[1]
                 
-                local opened = false
-                
-                local function toggleDropdown()
-                    opened = not opened
-                    if opened then
-                        dropdown.Size = UDim2.new(1, 0, 0, 50 + (#options * 25))
-                        optionContainer.Size = UDim2.new(1, 0, 0, #options * 25)
-                        optionContainer.Visible = true
-                        arrow.Text = "▲"
-                    else
-                        dropdown.Size = UDim2.new(1, 0, 0, 50)
-                        optionContainer.Size = UDim2.new(1, 0, 0, 0)
-                        optionContainer.Visible = false
-                        arrow.Text = "▼"
+                button.MouseButton1Click:Connect(function()
+                    local menu = Instance.new("Frame")
+                    menu.Name = "DropdownMenu"
+                    menu.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                    menu.BorderColor3 = Color3.fromRGB(60, 60, 60)
+                    menu.BorderSizePixel = 1
+                    menu.Position = UDim2.new(0, 0, 1, 5)
+                    menu.Size = UDim2.new(1, 0, 0, #options * 25)
+                    menu.ZIndex = 10
+                    menu.Parent = dropdown
+                    
+                    local listLayout = Instance.new("UIListLayout")
+                    listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                    listLayout.Parent = menu
+                    
+                    for i, option in ipairs(options) do
+                        local optionButton = Instance.new("TextButton")
+                        optionButton.Name = option
+                        optionButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                        optionButton.BackgroundTransparency = 0
+                        optionButton.BorderSizePixel = 0
+                        optionButton.Size = UDim2.new(1, 0, 0, 25)
+                        optionButton.Font = Enum.Font.Gotham
+                        optionButton.Text = option
+                        optionButton.TextColor3 = self.Config.Theme.Text
+                        optionButton.TextSize = 14
+                        optionButton.ZIndex = 10
+                        optionButton.Parent = menu
+                        
+                        optionButton.MouseEnter:Connect(function()
+                            optionButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+                        end)
+                        
+                        optionButton.MouseLeave:Connect(function()
+                            optionButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                        end)
+                        
+                        optionButton.MouseButton1Click:Connect(function()
+                            selectedValue = option
+                            selected.Text = option
+                            menu:Destroy()
+                            if callback then callback(option) end
+                        end)
                     end
-                end
-                
-                dropButton.MouseButton1Click:Connect(toggleDropdown)
-                
-                for i, option in ipairs(options) do
-                    local optionButton = Instance.new("TextButton")
-                    optionButton.Name = option
-                    optionButton.BackgroundColor3 = self.Config.Theme.Background
-                    optionButton.BackgroundTransparency = 0
-                    optionButton.BorderSizePixel = 0
-                    optionButton.Size = UDim2.new(1, 0, 0, 25)
-                    optionButton.Font = Enum.Font.Gotham
-                    optionButton.Text = "  " .. option
-                    optionButton.TextColor3 = self.Config.Theme.Text
-                    optionButton.TextSize = 14
-                    optionButton.TextXAlignment = Enum.TextXAlignment.Left
-                    optionButton.Parent = optionContainer
                     
-                    optionButton.MouseEnter:Connect(function()
-                        optionButton.BackgroundColor3 = self.Config.Theme.Hover
-                    end)
+                    -- Close dropdown when clicking elsewhere
+                    local function closeMenu()
+                        if menu and menu.Parent then
+                            menu:Destroy()
+                        end
+                    end
                     
-                    optionButton.MouseLeave:Connect(function()
-                        optionButton.BackgroundColor3 = self.Config.Theme.Background
+                    local closeConnection
+                    closeConnection = game:GetService("UserInputService").InputBegan:Connect(function(input)
+                        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                            closeMenu()
+                            closeConnection:Disconnect()
+                        end
                     end)
-                    
-                    optionButton.MouseButton1Click:Connect(function()
-                        selected = option
-                        dropButton.Text = "  " .. selected
-                        toggleDropdown()
-                        if callback then callback(selected) end
-                    end)
-                end
+                end)
                 
                 return {
                     SetValue = function(newValue)
                         if table.find(options, newValue) then
-                            selected = newValue
-                            dropButton.Text = "  " .. selected
-                            if callback then callback(selected) end
+                            selectedValue = newValue
+                            selected.Text = newValue
+                            if callback then callback(newValue) end
                         end
                     end,
                     GetValue = function()
-                        return selected
+                        return selectedValue
                     end
                 }
             end
             
-            function sectionElements:AddButton(name, callback)
-                local button = Instance.new("TextButton")
-                button.Name = name.."Button"
-                button.BackgroundColor3 = self.Config.Theme.Secondary
-                button.BorderSizePixel = 0
-                button.Size = UDim2.new(1, 0, 0, 30)
-                button.Font = Enum.Font.GothamBold
-                button.Text = name
-                button.TextColor3 = self.Config.Theme.Text
-                button.TextSize = 14
-                button.Parent = sectionContent
+            function SectionMethods:AddButton(name, callback)
+                local button = Instance.new("Frame")
+                button.Name = name .. "Button"
+                button.BackgroundTransparency = 1
+                button.Size = UDim2.new(1, 0, 0, 25)
+                button.Parent = content
                 
-                button.MouseEnter:Connect(function()
-                    button.BackgroundColor3 = self.Config.Theme.Hover
+                local buttonElement = Instance.new("TextButton")
+                buttonElement.Name = "ButtonElement"
+                buttonElement.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                buttonElement.BorderColor3 = Color3.fromRGB(60, 60, 60)
+                buttonElement.BorderSizePixel = 1
+                buttonElement.Size = UDim2.new(1, 0, 1, 0)
+                buttonElement.Font = Enum.Font.Gotham
+                buttonElement.Text = name
+                buttonElement.TextColor3 = self.Config.Theme.Text
+                buttonElement.TextSize = 14
+                buttonElement.Parent = button
+                
+                buttonElement.MouseEnter:Connect(function()
+                    buttonElement.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
                 end)
                 
-                button.MouseLeave:Connect(function()
-                    button.BackgroundColor3 = self.Config.Theme.Secondary
+                buttonElement.MouseLeave:Connect(function()
+                    buttonElement.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
                 end)
                 
-                button.MouseButton1Click:Connect(function()
+                buttonElement.MouseButton1Click:Connect(function()
                     if callback then callback() end
                 end)
             end
             
-            function sectionElements:AddTextbox(name, placeholder, callback)
+            function SectionMethods:AddTextbox(name, placeholder, callback)
                 local textbox = Instance.new("Frame")
-                textbox.Name = name.."Textbox"
+                textbox.Name = name .. "Textbox"
                 textbox.BackgroundTransparency = 1
-                textbox.Size = UDim2.new(1, 0, 0, 45)
-                textbox.Parent = sectionContent
+                textbox.Size = UDim2.new(1, 0, 0, 20)
+                textbox.Parent = content
                 
                 local label = Instance.new("TextLabel")
                 label.Name = "Label"
                 label.BackgroundTransparency = 1
-                label.Size = UDim2.new(1, 0, 0, 20)
+                label.Size = UDim2.new(0.5, -5, 1, 0)
                 label.Font = Enum.Font.Gotham
                 label.Text = name
                 label.TextColor3 = self.Config.Theme.Text
@@ -595,12 +601,13 @@ function PlexUI:CreateWindow(config)
                 
                 local inputBox = Instance.new("TextBox")
                 inputBox.Name = "Input"
-                inputBox.BackgroundColor3 = self.Config.Theme.Background
-                inputBox.BorderSizePixel = 0
-                inputBox.Position = UDim2.new(0, 0, 0, 25)
-                inputBox.Size = UDim2.new(1, 0, 0, 25)
+                inputBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+                inputBox.BorderColor3 = Color3.fromRGB(60, 60, 60)
+                inputBox.BorderSizePixel = 1
+                inputBox.Position = UDim2.new(0.5, 0, 0, 0)
+                inputBox.Size = UDim2.new(0.5, 0, 1, 0)
                 inputBox.Font = Enum.Font.Gotham
-                inputBox.PlaceholderText = placeholder or "Enter text..."
+                inputBox.PlaceholderText = placeholder or ""
                 inputBox.Text = ""
                 inputBox.TextColor3 = self.Config.Theme.Text
                 inputBox.TextSize = 14
@@ -622,20 +629,20 @@ function PlexUI:CreateWindow(config)
                 }
             end
             
-            return sectionElements
+            return SectionMethods
         end
         
-        return tabElements
+        return TabMethods
     end
     
-    -- Initialize the UI
+    -- Parent the ScreenGui
     if game:GetService("RunService"):IsStudio() then
         screenGui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
     else
         screenGui.Parent = game:GetService("CoreGui")
     end
     
-    return PlexLibrary
+    return UI
 end
 
-return PlexUI
+return ZyncUI
